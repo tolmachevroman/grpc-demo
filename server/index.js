@@ -1,12 +1,13 @@
+// server/index.js
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 
-// Load proto file
+// Load proto file with proper long handling
 const PROTO_PATH = path.join(__dirname, '../proto/dashboard.proto');
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   keepCase: true,
-  longs: String,
+  longs: String, // Convert int64 to/from strings for safe handling
   enums: String,
   defaults: true,
   oneofs: true,
@@ -26,7 +27,7 @@ let dashboardState = {
   temperature: 23.5,
   progress_percentage: 75,
   priority: 'PRIORITY_MEDIUM',
-  last_updated: Date.now(),
+  last_updated: Date.now().toString(),
   config: {
     theme: 'dark',
     language: 'en',
@@ -48,6 +49,7 @@ function broadcastUpdate(updatedBy, updatedFields) {
   activeStreams.forEach((stream, clientId) => {
     try {
       stream.write(response);
+      console.log(`Update sent to client ${clientId}`);
     } catch (error) {
       console.error(`Failed to send update to client ${clientId}:`, error);
       activeStreams.delete(clientId);
@@ -60,58 +62,83 @@ const dashboardService = {
   // Get current dashboard state
   getDashboard: (call, callback) => {
     console.log('GetDashboard called');
-    callback(null, { state: dashboardState });
+    callback(null, {
+      state: dashboardState,
+    });
   },
 
-  // Update dashboard fields
+  // Update dashboard state
   updateDashboard: (call, callback) => {
-    const { updates, updated_fields } = call.request;
-    console.log('UpdateDashboard called with fields:', updated_fields);
+    const { state, updated_by } = call.request;
 
-    try {
-      // Update only specified fields
-      if (updated_fields && updated_fields.length > 0) {
-        updated_fields.forEach((field) => {
-          if (updates.hasOwnProperty(field)) {
-            dashboardState[field] = updates[field];
-          }
-        });
-      } else {
-        // Update all provided fields
-        Object.keys(updates).forEach((key) => {
-          if (updates[key] !== undefined && updates[key] !== null) {
-            dashboardState[key] = updates[key];
-          }
-        });
+    if (state) {
+      // Update fields that were provided
+      const updatedFields = [];
+
+      if (state.title !== undefined) {
+        dashboardState.title = state.title;
+        updatedFields.push('title');
+      }
+      if (state.description !== undefined) {
+        dashboardState.description = state.description;
+        updatedFields.push('description');
+      }
+      if (state.status_message !== undefined) {
+        dashboardState.status_message = state.status_message;
+        updatedFields.push('status_message');
+      }
+      if (state.is_enabled !== undefined) {
+        dashboardState.is_enabled = state.is_enabled;
+        updatedFields.push('is_enabled');
+      }
+      if (state.maintenance_mode !== undefined) {
+        dashboardState.maintenance_mode = state.maintenance_mode;
+        updatedFields.push('maintenance_mode');
+      }
+      if (state.notifications_on !== undefined) {
+        dashboardState.notifications_on = state.notifications_on;
+        updatedFields.push('notifications_on');
+      }
+      if (state.user_count !== undefined) {
+        dashboardState.user_count = state.user_count;
+        updatedFields.push('user_count');
+      }
+      if (state.temperature !== undefined) {
+        dashboardState.temperature = state.temperature;
+        updatedFields.push('temperature');
+      }
+      if (state.progress_percentage !== undefined) {
+        dashboardState.progress_percentage = state.progress_percentage;
+        updatedFields.push('progress_percentage');
+      }
+      if (state.priority !== undefined) {
+        dashboardState.priority = state.priority;
+        updatedFields.push('priority');
+      }
+      if (state.config !== undefined) {
+        dashboardState.config = state.config;
+        updatedFields.push('config');
       }
 
-      // Update timestamp
-      dashboardState.last_updated = Date.now();
+      // Always update the timestamp
+      dashboardState.last_updated = Date.now().toString();
 
-      // Broadcast to all connected clients
-      broadcastUpdate('client', updated_fields || Object.keys(updates));
+      console.log(`Dashboard updated by ${updated_by}:`, updatedFields);
 
-      callback(null, {
-        success: true,
-        message: 'Dashboard updated successfully',
-        state: dashboardState,
-      });
-    } catch (error) {
-      callback(null, {
-        success: false,
-        message: `Update failed: ${error.message}`,
-        state: dashboardState,
-      });
+      // Broadcast update to all connected clients
+      broadcastUpdate(updated_by, updatedFields);
     }
+
+    callback(null, {
+      state: dashboardState,
+      success: true,
+    });
   },
 
-  // Stream dashboard updates (server-side streaming)
+  // Stream dashboard updates
   streamDashboard: (call) => {
     const clientId = call.request.client_id || `client_${Date.now()}`;
     console.log(`Client ${clientId} connected to stream`);
-
-    // Store the stream
-    activeStreams.set(clientId, call);
 
     // Send initial state
     call.write({
@@ -120,10 +147,14 @@ const dashboardService = {
       updated_fields: [],
     });
 
+    // Store this stream connection
+    activeStreams.set(clientId, call);
+
     // Handle client disconnect
-    call.on('cancelled', () => {
+    call.on('end', () => {
       console.log(`Client ${clientId} disconnected`);
       activeStreams.delete(clientId);
+      call.end();
     });
 
     call.on('error', (error) => {
@@ -132,53 +163,99 @@ const dashboardService = {
     });
   },
 
-  // Bidirectional streaming for real-time sync
+  // Bidirectional sync stream
   syncDashboard: (call) => {
-    const clientId = `sync_${Date.now()}`;
-    console.log(`Client ${clientId} connected for bidirectional sync`);
+    const clientId = call.metadata.get('client-id')?.[0] || `sync_${Date.now()}`;
+    console.log(`Client ${clientId} connected for sync`);
 
     // Send initial state
     call.write({
       state: dashboardState,
-      updated_by: 'server',
-      updated_fields: [],
+      updatedBy: 'server',
+      updatedFields: [],
     });
 
     // Handle incoming updates from client
     call.on('data', (request) => {
-      const { updates, updated_fields } = request;
-      console.log(`Received update from ${clientId}:`, updated_fields);
-
       try {
-        // Apply updates
-        if (updated_fields && updated_fields.length > 0) {
-          updated_fields.forEach((field) => {
-            if (updates.hasOwnProperty(field)) {
-              dashboardState[field] = updates[field];
+        const { state, updated_by } = request;
+
+        if (state) {
+          // Update state
+          const updatedFields = [];
+
+          // Apply updates (same logic as updateDashboard)
+          if (state.title !== undefined) {
+            dashboardState.title = state.title;
+            updatedFields.push('title');
+          }
+          if (state.description !== undefined) {
+            dashboardState.description = state.description;
+            updatedFields.push('description');
+          }
+          if (state.status_message !== undefined) {
+            dashboardState.status_message = state.status_message;
+            updatedFields.push('status_message');
+          }
+          if (state.is_enabled !== undefined) {
+            dashboardState.is_enabled = state.is_enabled;
+            updatedFields.push('is_enabled');
+          }
+          if (state.maintenance_mode !== undefined) {
+            dashboardState.maintenance_mode = state.maintenance_mode;
+            updatedFields.push('maintenance_mode');
+          }
+          if (state.notifications_on !== undefined) {
+            dashboardState.notifications_on = state.notifications_on;
+            updatedFields.push('notifications_on');
+          }
+          if (state.user_count !== undefined) {
+            dashboardState.user_count = state.user_count;
+            updatedFields.push('user_count');
+          }
+          if (state.temperature !== undefined) {
+            dashboardState.temperature = state.temperature;
+            updatedFields.push('temperature');
+          }
+          if (state.progress_percentage !== undefined) {
+            dashboardState.progress_percentage = state.progress_percentage;
+            updatedFields.push('progress_percentage');
+          }
+          if (state.priority !== undefined) {
+            dashboardState.priority = state.priority;
+            updatedFields.push('priority');
+          }
+          if (state.config !== undefined) {
+            dashboardState.config = state.config;
+            updatedFields.push('config');
+          }
+
+          // Update timestamp
+          dashboardState.last_updated = Date.now().toString();
+
+          console.log(`Sync update from ${updated_by || clientId}:`, updatedFields);
+
+          // Create response
+          const response = {
+            state: dashboardState,
+            updated_by: updated_by || clientId,
+            updated_fields: updatedFields,
+          };
+
+          // Broadcast to all other streams
+          activeStreams.forEach((stream, streamId) => {
+            if (streamId !== clientId) {
+              try {
+                stream.write(response);
+              } catch (error) {
+                console.error('Failed to broadcast:', error);
+              }
             }
           });
+
+          // Also send back to sync stream
+          call.write(response);
         }
-
-        dashboardState.last_updated = Date.now();
-
-        // Broadcast to all clients (including sender for confirmation)
-        const response = {
-          state: dashboardState,
-          updated_by: clientId,
-          updated_fields: updated_fields || [],
-        };
-
-        // Send to all active streams
-        activeStreams.forEach((stream) => {
-          try {
-            stream.write(response);
-          } catch (error) {
-            console.error('Failed to broadcast:', error);
-          }
-        });
-
-        // Also send to sync streams
-        call.write(response);
       } catch (error) {
         console.error(`Update error from ${clientId}:`, error);
       }
@@ -224,6 +301,10 @@ function startServer() {
 // Handle graceful shutdown
 process.on('SIGINT', () => {
   console.log('\nShutting down server...');
+  activeStreams.forEach((stream, clientId) => {
+    console.log(`Closing stream for client ${clientId}`);
+    stream.end();
+  });
   process.exit(0);
 });
 

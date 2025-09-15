@@ -1,2 +1,22 @@
-# grpc-demo
-Demo app of seamless &amp; efficient interaction between web app and mobile clients
+# gRPC Demo
+Demo app of seamless &amp; efficient interaction between web app and mobile clients using gRPC
+
+## Overview
+The goal of this project is to model a somewhat real-life example of a client-server communication using [gRPC](https://grpc.io/).
+
+The birds eye view of the tech stack:
+
+- Protobuf for .proto files definitions, which then used in both server and client code generation;
+- Node.js for running the server;
+- Vainilla React app using Vite and Typescript;
+- Android app using Kotlin & Compose and modern architecture;
+- iOS app using Swift and Swift UI and modern architecture.
+
+
+## gRPC Useful Resources
+I've collected a few YouTube links and articles for those who are new to gRPC or wants to refresh their memory:
+
+- [Official gRPC website](https://grpc.io/)
+- [gRPC vs REST](https://www.ibm.com/think/topics/grpc-vs-rest)
+- [99% of Developers Don't Get RPCs](https://www.youtube.com/watch?v=K4_cgtAe4HM&ab_channel=TheCodingGopher)
+- []()
