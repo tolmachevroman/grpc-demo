@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom utility classes */
+@layer utilities {
+  .bg-gradient-primary {
+    @apply bg-gradient-to-br from-violet-600 to-purple-700;
+  }
+
+  .bg-gradient-dashboard {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+}
