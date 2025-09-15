@@ -1,4 +1,3 @@
-// web/src/App.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 
@@ -21,6 +20,18 @@ import { ConfigurationPanel } from './components/dashboard/ConfigurationPanel';
 import { LoadingScreen } from './components/dashboard/LoadingScreen';
 import { DashboardServiceClient } from './generated/dashboard.client';
 
+// Theme icons (simple unicode for demo)
+const SunIcon = () => (
+  <span role="img" aria-label="Light">
+    🌞
+  </span>
+);
+const MoonIcon = () => (
+  <span role="img" aria-label="Dark">
+    🌙
+  </span>
+);
+
 function App() {
   // Direct use of generated type - no conversion needed!
   const [dashboard, setDashboard] = useState<DashboardState>(INITIAL_DASHBOARD);
@@ -30,6 +41,26 @@ function App() {
   const [client, setClient] = useState<DashboardServiceClient | null>(null);
   const [activeTab, setActiveTab] = useState('status');
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Theme state
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
+    }
+    return 'light';
+  });
+
+  // Apply theme class to <html> (Tailwind expects this for 'class' strategy)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+      localStorage.setItem('theme', theme);
+    }
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  }, []);
 
   useEffect(() => {
     const initializeGrpc = async () => {
@@ -193,7 +224,15 @@ function App() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        <DashboardHeader dashboard={dashboard} connected={connected} error={error} />
+        <DashboardHeader
+          dashboard={dashboard}
+          connected={connected}
+          error={error}
+          theme={theme}
+          toggleTheme={toggleTheme}
+          SunIcon={SunIcon}
+          MoonIcon={MoonIcon}
+        />
 
         {/* Tab Navigation */}
         <div className="flex space-x-1 border-b">

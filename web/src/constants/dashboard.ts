@@ -1,4 +1,3 @@
-// web/src/constants/dashboard.ts
 import { Priority, DashboardState } from '../generated/dashboard';
 
 export const PRIORITY_CONFIG = {

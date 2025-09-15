@@ -6,15 +6,15 @@ The goal of this project is to model a somewhat real-life example of a client-se
 
 The birds eye view of the tech stack:
 
-- Protobuf for .proto files definitions, which then used in both server and client code generation;
-- Node.js for running the server;
-- Vainilla React app using Vite and Typescript;
+- [Protobuf](https://protobuf.dev/) for `.proto` files definitions, which then used in both server and client code generation;
+- [Node.js](https://nodejs.org/en/learn/getting-started/introduction-to-nodejs) and [Envoy](https://www.envoyproxy.io/) for running the server;
+- Vainilla [React](https://react.dev/) app using [Vite](https://vite.dev/) and [Typescript](https://www.typescriptlang.org/);
 - Android app using Kotlin & Compose and modern architecture;
 - iOS app using Swift and Swift UI and modern architecture.
 
 
 ## gRPC Useful Resources
-I've collected a few YouTube links and articles for those who are new to gRPC or wants to refresh their memory:
+I've collected a few YouTube links and articles for those who are new to gRPC or want to refresh their memory:
 
 - [Official gRPC website](https://grpc.io/)
 - [gRPC vs REST](https://www.ibm.com/think/topics/grpc-vs-rest)
