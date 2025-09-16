@@ -1,4 +1,3 @@
-// proto/dashboard.proto
 syntax = "proto3";
 
 package dashboard;
@@ -40,8 +39,8 @@ message GetDashboardResponse {
 
 // Request to update dashboard state
 message UpdateDashboardRequest {
-  DashboardState state = 1;        // Fields to update (partial update supported)
-  string updated_by = 2;            // Identifier of who made the update
+  DashboardState updates = 1;     // Partial updates
+  repeated string updated_fields = 2; // Which fields are being updated
 }
 
 // Response after updating dashboard

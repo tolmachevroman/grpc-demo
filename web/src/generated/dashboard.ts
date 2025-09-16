@@ -95,13 +95,13 @@ export interface GetDashboardResponse {
  */
 export interface UpdateDashboardRequest {
     /**
-     * @generated from protobuf field: dashboard.DashboardState state = 1
+     * @generated from protobuf field: dashboard.DashboardState updates = 1
      */
-    state?: DashboardState; // Fields to update (partial update supported)
+    updates?: DashboardState; // Partial updates
     /**
-     * @generated from protobuf field: string updated_by = 2
+     * @generated from protobuf field: repeated string updated_fields = 2
      */
-    updatedBy: string; // Identifier of who made the update
+    updatedFields: string[]; // Which fields are being updated
 }
 /**
  * Response after updating dashboard
@@ -448,13 +448,13 @@ export const GetDashboardResponse = new GetDashboardResponse$Type();
 class UpdateDashboardRequest$Type extends MessageType<UpdateDashboardRequest> {
     constructor() {
         super("dashboard.UpdateDashboardRequest", [
-            { no: 1, name: "state", kind: "message", T: () => DashboardState },
-            { no: 2, name: "updated_by", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 1, name: "updates", kind: "message", T: () => DashboardState },
+            { no: 2, name: "updated_fields", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<UpdateDashboardRequest>): UpdateDashboardRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.updatedBy = "";
+        message.updatedFields = [];
         if (value !== undefined)
             reflectionMergePartial<UpdateDashboardRequest>(this, message, value);
         return message;
@@ -464,11 +464,11 @@ class UpdateDashboardRequest$Type extends MessageType<UpdateDashboardRequest> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* dashboard.DashboardState state */ 1:
-                    message.state = DashboardState.internalBinaryRead(reader, reader.uint32(), options, message.state);
+                case /* dashboard.DashboardState updates */ 1:
+                    message.updates = DashboardState.internalBinaryRead(reader, reader.uint32(), options, message.updates);
                     break;
-                case /* string updated_by */ 2:
-                    message.updatedBy = reader.string();
+                case /* repeated string updated_fields */ 2:
+                    message.updatedFields.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -482,12 +482,12 @@ class UpdateDashboardRequest$Type extends MessageType<UpdateDashboardRequest> {
         return message;
     }
     internalBinaryWrite(message: UpdateDashboardRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* dashboard.DashboardState state = 1; */
-        if (message.state)
-            DashboardState.internalBinaryWrite(message.state, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* string updated_by = 2; */
-        if (message.updatedBy !== "")
-            writer.tag(2, WireType.LengthDelimited).string(message.updatedBy);
+        /* dashboard.DashboardState updates = 1; */
+        if (message.updates)
+            DashboardState.internalBinaryWrite(message.updates, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated string updated_fields = 2; */
+        for (let i = 0; i < message.updatedFields.length; i++)
+            writer.tag(2, WireType.LengthDelimited).string(message.updatedFields[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

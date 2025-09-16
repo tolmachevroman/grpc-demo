@@ -1,14 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 
-// gRPC - All types come from generated!
+// gRPC - All types come from generated
 import { DashboardState, Priority, GetDashboardRequest, UpdateDashboardRequest, StreamDashboardRequest } from './generated/dashboard';
 import { GrpcWebFetchTransport } from '@protobuf-ts/grpcweb-transport';
 
 // Constants (just values, no types)
 import { INITIAL_DASHBOARD } from './constants/dashboard';
 
-// Helpers (just 2 simple functions)
 import { normalizeState, withTimestamp } from './utils/grpc-helpers';
 
 // Components
@@ -20,7 +19,6 @@ import { ConfigurationPanel } from './components/dashboard/ConfigurationPanel';
 import { LoadingScreen } from './components/dashboard/LoadingScreen';
 import { DashboardServiceClient } from './generated/dashboard.client';
 
-// Theme icons (simple unicode for demo)
 const SunIcon = () => (
   <span role="img" aria-label="Light">
     🌞
@@ -33,7 +31,6 @@ const MoonIcon = () => (
 );
 
 function App() {
-  // Direct use of generated type - no conversion needed!
   const [dashboard, setDashboard] = useState<DashboardState>(INITIAL_DASHBOARD);
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -42,7 +39,6 @@ function App() {
   const [activeTab, setActiveTab] = useState('status');
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Theme state
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
@@ -50,7 +46,6 @@ function App() {
     return 'light';
   });
 
-  // Apply theme class to <html> (Tailwind expects this for 'class' strategy)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -62,9 +57,95 @@ function App() {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   }, []);
 
+  // Fix for your App.tsx useEffect to prevent duplicate connections
+
   useEffect(() => {
+    let isMounted = true;
+    let streamAbortController: AbortController | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+    let reconnectAttempts = 0;
+    let currentStreamId: string | null = null; // Track the stream ID
+
+    const startStream = async (grpcClient: DashboardServiceClient) => {
+      // Cancel any existing stream first
+      if (streamAbortController) {
+        console.log('🔄 Canceling previous stream...');
+        streamAbortController.abort();
+      }
+
+      // Generate unique stream ID
+      currentStreamId = `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log(`📡 Starting new stream: ${currentStreamId}`);
+
+      const streamRequest = StreamDashboardRequest.create({
+        clientId: currentStreamId,
+      });
+
+      streamAbortController = new AbortController();
+      abortControllerRef.current = streamAbortController;
+
+      try {
+        const stream = grpcClient.streamDashboard(streamRequest, {
+          abort: streamAbortController.signal,
+        });
+
+        for await (const response of stream.responses) {
+          if (!isMounted) {
+            console.log(`⚠️ Received update after unmount, ignoring`);
+            return;
+          }
+
+          console.log(`📥 [${currentStreamId}] Stream update received`);
+
+          if (response.state) {
+            setDashboard(normalizeState(response.state));
+            setConnected(true);
+            setError(null);
+          }
+
+          if (response.updatedBy) {
+            console.log(`   Update from: ${response.updatedBy}`);
+          }
+        }
+
+        // If stream ends naturally and component is still mounted, reconnect
+        if (isMounted) {
+          console.log(`⚠️ Stream ${currentStreamId} ended, will reconnect...`);
+          reconnectWithBackoff(grpcClient);
+        }
+      } catch (err: any) {
+        if (!isMounted) {
+          console.log(`✅ Stream ${currentStreamId} canceled due to unmount`);
+          return;
+        }
+
+        if (err.name === 'AbortError') {
+          console.log(`✅ Stream ${currentStreamId} aborted`);
+        } else {
+          console.error(`❌ Stream ${currentStreamId} error:`, err);
+          setConnected(false);
+          setError(`Connection lost: ${err.message}`);
+          reconnectWithBackoff(grpcClient);
+        }
+      }
+    };
+
+    const reconnectWithBackoff = (grpcClient: DashboardServiceClient) => {
+      if (!isMounted) return;
+
+      reconnectAttempts++;
+      const delay = Math.min(1000 * 2 ** reconnectAttempts, 30000);
+      console.log(`⏳ Reconnecting in ${delay}ms (attempt ${reconnectAttempts})`);
+
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      reconnectTimeout = setTimeout(() => {
+        if (isMounted) startStream(grpcClient);
+      }, delay);
+    };
+
     const initializeGrpc = async () => {
       try {
+        console.log('🚀 Initializing gRPC client...');
         setLoading(true);
         setError(null);
 
@@ -81,6 +162,7 @@ function App() {
           const { response } = await grpcClient.getDashboard(request);
 
           if (response.state) {
+            console.log('✅ Initial state loaded');
             setDashboard(normalizeState(response.state));
             setConnected(true);
             setLoading(false);
@@ -90,63 +172,50 @@ function App() {
           setLoading(false);
         }
 
-        // Setup streaming
-        const streamRequest = StreamDashboardRequest.create({
-          clientId: `web_${Date.now()}`,
-        });
-
-        const abortController = new AbortController();
-        abortControllerRef.current = abortController;
-
-        const stream = grpcClient.streamDashboard(streamRequest, {
-          abort: abortController.signal,
-        });
-
-        // Handle stream updates
-        (async () => {
-          try {
-            for await (const response of stream.responses) {
-              console.log('Received stream update:', response);
-
-              if (response.state) {
-                setDashboard(normalizeState(response.state));
-                setConnected(true);
-                setError(null);
-              }
-
-              if (response.updatedBy) {
-                console.log(`Update from: ${response.updatedBy}`);
-              }
-            }
-          } catch (err: any) {
-            if (err.name !== 'AbortError') {
-              console.error('Stream error:', err);
-              setConnected(false);
-              setError(`Connection lost: ${err.message}`);
-            }
-          }
-        })();
+        // Start streaming with reconnect
+        reconnectAttempts = 0;
+        startStream(grpcClient);
       } catch (err: any) {
-        console.error('gRPC initialization failed:', err);
+        console.error('❌ gRPC initialization failed:', err);
         setError('Failed to connect to server. Make sure the server and Envoy are running.');
         setConnected(false);
         setLoading(false);
       }
     };
 
+    // Initialize only once
     initializeGrpc();
 
     return () => {
+      console.log(`🧹 Cleaning up gRPC connections (stream: ${currentStreamId})`);
+      isMounted = false;
+
+      // Cancel any active stream
+      if (streamAbortController) {
+        streamAbortController.abort();
+        streamAbortController = null;
+      }
+
+      // Cancel the shared abort controller
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
-    };
-  }, []);
 
-  // Simple update function - no type conversion!
+      // Clear any pending reconnection
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
+
+      console.log('✅ Cleanup complete');
+    };
+  }, []); // Empty dependency array - run only once
+
   const updateDashboard = useCallback(
     async (updates: Partial<DashboardState>) => {
       if (!client || !connected) {
+        // Optimistic update when not connected
         setDashboard(
           (prev) =>
             ({
@@ -158,21 +227,39 @@ function App() {
       }
 
       try {
-        const stateUpdate = withTimestamp({ ...dashboard, ...updates });
+        const stateUpdates = DashboardState.create({
+          ...updates,
+          lastUpdated: BigInt(Date.now()).toString(),
+        });
+
+        const updatedFields = Object.keys(updates).filter((key) => updates[key as keyof DashboardState] !== undefined);
+
+        console.log('📤 Sending update:', { updates: stateUpdates, updatedFields });
 
         const request = UpdateDashboardRequest.create({
-          state: stateUpdate as DashboardState,
-          updatedBy: 'web_user',
+          updates: stateUpdates,
+          updatedFields: updatedFields,
         });
 
         const { response } = await client.updateDashboard(request);
 
-        if (response.state) {
-          setDashboard(normalizeState(response.state));
+        if (response) {
+          if ('success' in response && response.success) {
+            console.log('✅ Update successful');
+          } else if ('success' in response && !response.success) {
+            console.error('❌ Update failed');
+            setError('Update failed');
+          }
+
+          // Always use the returned state if available
+          if (response.state) {
+            setDashboard(normalizeState(response.state));
+          }
         }
       } catch (err) {
         console.error('Update failed:', err);
         setError('Failed to update dashboard');
+        // Optimistic update on error
         setDashboard(
           (prev) =>
             ({
@@ -182,10 +269,9 @@ function App() {
         );
       }
     },
-    [client, connected, dashboard]
+    [client, connected]
   );
 
-  // UI handlers - working directly with DashboardState fields
   const handleToggle = useCallback(
     (field: keyof DashboardState) => {
       const currentValue = dashboard[field];

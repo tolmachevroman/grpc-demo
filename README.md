@@ -19,4 +19,5 @@ I've collected a few YouTube links and articles for those who are new to gRPC or
 - [Official gRPC website](https://grpc.io/)
 - [gRPC vs REST](https://www.ibm.com/think/topics/grpc-vs-rest)
 - [99% of Developers Don't Get RPCs](https://www.youtube.com/watch?v=K4_cgtAe4HM&ab_channel=TheCodingGopher)
+- [Can gRPC replace REST and WebSockets for Web Application Communication?](https://grpc.io/blog/postman-grpcweb/)
 - []()
