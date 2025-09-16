@@ -238,7 +238,9 @@ async function testBandwidth() {
     }
   });
 
-  for (let i = 0; i < 3; i++) {
+  // Increase pressure: send 100 updates
+  const updateCount = 100;
+  for (let i = 0; i < updateCount; i++) {
     await new Promise((resolve) => {
       client.updateDashboard(
         {
@@ -248,7 +250,7 @@ async function testBandwidth() {
         resolve
       );
     });
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 10)); // small delay to avoid flooding
   }
 
   await new Promise((r) => setTimeout(r, 1000));
