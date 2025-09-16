@@ -2,6 +2,9 @@ syntax = "proto3";
 
 package dashboard;
 
+option java_package = "com.demo.android.grpc";
+option java_multiple_files = true;
+
 // Priority levels for the dashboard
 enum Priority {
   PRIORITY_UNSPECIFIED = 0;

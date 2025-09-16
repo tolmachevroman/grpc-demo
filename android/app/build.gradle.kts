@@ -1,3 +1,4 @@
+import com.google.protobuf.gradle.id
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -43,24 +44,27 @@ android {
 
 protobuf {
     protoc {
-        artifact ="com.google.protobuf:protoc:4.32.1"
+        artifact = "com.google.protobuf:protoc:${libs.versions.protobuf.get()}"
     }
+
     plugins {
-        create("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.75.0"
+        id("grpc") {
+            artifact = "io.grpc:protoc-gen-grpc-java:${libs.versions.grpc.get()}"
         }
-        create("grpckt") {
-            artifact = "io.grpc:protoc-gen-grpc-kotlin:1.4.3:jdk8@jar"
+        id("grpckt") {
+            artifact = "io.grpc:protoc-gen-grpc-kotlin:${libs.versions.grpcKotlin.get()}:jdk8@jar"
         }
     }
+
     generateProtoTasks {
-        all().forEach {
-            it.plugins {
-                create("grpc")
-                create("grpckt")
+        all().forEach { task ->
+            task.plugins {
+                id("grpc")
+                id("grpckt")
             }
-            it.builtins {
-                create("kotlin")
+            task.builtins {
+                id("java")
+                id("kotlin")
             }
         }
     }
@@ -80,7 +84,16 @@ dependencies {
     // gRPC dependencies
     implementation(libs.grpc.stub)
     implementation(libs.grpc.kotlin.stub)
+    implementation(libs.grpc.okhttp)
     implementation(libs.protobuf.kotlin)
+    implementation(libs.grpc.protobuf)
+    implementation(libs.protobuf.java)
+
+    // Koin dependencies
+    implementation(libs.koin.android)
+    implementation(libs.koin.androidx.compose)
+    implementation(libs.koin.core)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -89,4 +102,8 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+tasks.named("clean") {
+    finalizedBy("generateDebugProto", "generateReleaseProto")
 }
