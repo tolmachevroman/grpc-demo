@@ -25,8 +25,6 @@
 - Not native WebSocket
 - Requires proxy for browsers
 
----
-
 ## 2. [socket.io](https://socket.io/)
 
 ### Free, open source, but proprietary protocol
@@ -55,7 +53,6 @@
 - No code generation
 - **FedRAMP concern**: Proprietary protocol may complicate government authorization
 
----
 ## 3. Raw WebSockets
 #### W3C standard with maximum control
 
@@ -77,8 +74,6 @@
 - No fallbacks
 - Most development work
 
----
-
 ## 4. [GraphQL](https://graphql.org/) Subscriptions
 ### Only if already using GraphQL..
 
@@ -95,8 +90,6 @@
 - Not worth adopting just for real-time
 - Only viable if GraphQL already in use
 
----
-
 ##  Non-viable Solutions
 
 ### Dead on Mobile (Obsolete Libraries)
@@ -111,8 +104,6 @@
 - **Firebase**: Won't work on AOSP (needs Play Services), requires FedRAMP authorization
 - **PubNub/Pusher/Ably**: Commercial services, must check FedRAMP Marketplace if needed for government
 
----
-
 ## Quick Decision Matrix
 
 | Solution       | Open Standard | Library Quality | AOSP | FedRAMP   | RPC    | Pub/Sub |
@@ -120,7 +111,7 @@
 | **Socket.IO**  | No            | Good            | Yes  | Poor      | Yes    | Yes     |
 | **gRPC**       | Yes           | Excellent       | Yes  | Excellent | Yes    | Yes     |
 | **WebSockets** | Yes           | Excellent       | Yes  | Excellent | Manual | Manual  |
-| GraphQL        | Partial       | Good            | Yes  | Good      | Yes    | Yes     |
+| GraphQL\*      | Partial       | Good            | Yes  | Good      | Yes    | Yes     |
 | MQTT           | Yes           | Dead            | Yes  | Good      | No     | Yes     |
 | SSE+REST       | Yes           | Dead iOS        | Yes  | Good      | REST   | SSE     |
 
@@ -130,8 +121,6 @@
 - **Poor**: Proprietary protocol will complicate government authorization
 - **Good**: Open standard, acceptable for FedRAMP
 - **Excellent**: Open standard with proven government adoption
-
----
 
 ## FedRAMP Compliance Considerations
 
@@ -158,7 +147,6 @@ FedRAMP compliance is about HOW you deploy, not WHAT protocol you use. However, 
 ### Bottom Line for FedRAMP
 If government contracts are in your future, **avoid proprietary protocols** even if they're free. Stick with **gRPC or WebSockets** for the smoothest authorization process.
 
----
 
 ## Key Insights
 
@@ -169,5 +157,3 @@ If government contracts are in your future, **avoid proprietary protocols** even
 3. **Library maintenance trumps protocol features** - Better to use a simpler protocol with active libraries than a perfect protocol with dead libraries
 
 4. **Very few viable options** - The mobile ecosystem for open protocols is surprisingly poor
-
----
