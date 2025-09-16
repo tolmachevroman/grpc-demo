@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package dashboard;
+
+// Priority levels for the dashboard
+enum Priority {
+  PRIORITY_UNSPECIFIED = 0;
+  PRIORITY_LOW = 1;
+  PRIORITY_MEDIUM = 2;
+  PRIORITY_HIGH = 3;
+  PRIORITY_CRITICAL = 4;
+}
+
+// Main dashboard state
+message DashboardState {
+  string title = 1;                    // Dashboard title
+  string description = 2;               // Dashboard description
+  string status_message = 3;            // Current status message
+  bool is_enabled = 4;                  // System enabled flag
+  bool maintenance_mode = 5;            // Maintenance mode flag
+  bool notifications_on = 6;            // Notifications enabled flag
+  int32 user_count = 7;                 // Number of active users
+  double temperature = 8;               // System temperature in Celsius
+  int32 progress_percentage = 9;        // Progress percentage (0-100)
+  Priority priority = 10;               // Current priority level
+  string last_updated = 11;             // Timestamp as string (milliseconds since epoch)
+  map<string, string> config = 12;     // Configuration key-value pairs
+}
+
+// Request to get dashboard state
+message GetDashboardRequest {
+  // Empty - gets current state
+}
+
+// Response with dashboard state
+message GetDashboardResponse {
+  DashboardState state = 1;
+}
+
+// Request to update dashboard state
+message UpdateDashboardRequest {
+  DashboardState updates = 1;     // Partial updates
+  repeated string updated_fields = 2; // Which fields are being updated
+}
+
+// Response after updating dashboard
+message UpdateDashboardResponse {
+  DashboardState state = 1;        // New complete state after update
+  bool success = 2;                 // Whether update was successful
+}
+
+// Request to stream dashboard updates
+message StreamDashboardRequest {
+  string client_id = 1;             // Unique client identifier
+}
+
+// Response for dashboard stream
+message StreamDashboardResponse {
+  DashboardState state = 1;         // Current dashboard state
+  string updated_by = 2;             // Who triggered this update
+  repeated string updated_fields = 3; // Which fields were updated
+}
+
+// Request for bidirectional sync
+message SyncDashboardRequest {
+  DashboardState state = 1;         // State updates from client
+  string updated_by = 2;             // Who is making the update
+}
+
+// Response for bidirectional sync
+message SyncDashboardResponse {
+  DashboardState state = 1;         // Current state
+  string updated_by = 2;             // Who triggered this update
+  repeated string updated_fields = 3; // Which fields were updated
+}
+
+// Dashboard service definition
+service DashboardService {
+  // Get current dashboard state
+  rpc GetDashboard(GetDashboardRequest) returns (GetDashboardResponse);
+  
+  // Update dashboard state
+  rpc UpdateDashboard(UpdateDashboardRequest) returns (UpdateDashboardResponse);
+  
+  // Stream dashboard updates (server streaming)
+  rpc StreamDashboard(StreamDashboardRequest) returns (stream StreamDashboardResponse);
+  
+  // Bidirectional sync stream
+  rpc SyncDashboard(stream SyncDashboardRequest) returns (stream SyncDashboardResponse);
+}
