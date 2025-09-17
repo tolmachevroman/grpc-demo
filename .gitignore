@@ -1,0 +1,101 @@
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Build outputs
+dist/
+build/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Android specific
+android/local.properties
+android/app/build/
+android/.gradle/
+android/captures/
+android/keystore.properties
+*.apk
+*.aab
+*.dex
+*.class
+
+# iOS specific
+iOS/**/*.xcuserstate
+iOS/**/*.xcworkspace/xcuserdata/
+iOS/**/build/
+iOS/**/DerivedData/
+iOS/**/.build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Xcode
+iOS/**/*.xcodeproj/project.xcworkspace/
+iOS/**/*.xcodeproj/xcuserdata/
+iOS/**/*.xcworkspace/xcuserdata/
+
+# Swift Package Manager
+iOS/.build/
+iOS/Packages/
+iOS/Package.resolved
+iOS/*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+
+# Protobuf compiled files
+**/*.pb.go
+**/*.pb.h
+**/*.pb.cc
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
