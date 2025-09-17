@@ -106,33 +106,42 @@ class DashboardViewModel(
 
     private fun sendPendingUpdates() {
         if (pendingUpdates.isEmpty()) return
-
         val currentState = _uiState.value.dashboardState ?: return
-        val fieldsToUpdate = pendingUpdates.keys.toList()
-        val updatedFields = fieldsToUpdate.toMutableList()
 
-        // Clear pending updates
         val updates = pendingUpdates.toMap()
+        val fieldsToUpdate = updates.keys.toList()
         pendingUpdates.clear()
 
-        Log.d(TAG, "Sending ${fieldsToUpdate.size} field updates to server")
+        // Convert snake_case field names to camelCase to match protobuf field names
+        val camelCaseFields = fieldsToUpdate.map { snakeField ->
+            when (snakeField) {
+                "user_count" -> "userCount"
+                "progress_percentage" -> "progressPercentage"
+                "is_enabled" -> "isEnabled"
+                "maintenance_mode" -> "maintenanceMode"
+                "notifications_on" -> "notificationsOn"
+                "status_message" -> "statusMessage"
+                "last_updated" -> "lastUpdated"
+                else -> snakeField // Fields without underscores remain the same
+            }
+        }
+
+        Log.d(TAG, "Sending batch of ${fieldsToUpdate.size} field updates to server")
+        Log.d(TAG, "Snake_case fields: $fieldsToUpdate")
+        Log.d(TAG, "CamelCase fields: $camelCaseFields")
 
         viewModelScope.launch {
-            // Build the updates
             val updatedState = buildUpdatedDashboardState(currentState, updates)
-
-            repository.updateDashboardState(updatedState, updatedFields)
-                .onSuccess { newState ->
-                    Log.d(TAG, "Server update successful - stream will provide the update")
-                    // Note: We don't update UI here because the stream will provide the update
+            repository.updateDashboardState(updatedState, camelCaseFields)
+                .onSuccess {
+                    Log.d(TAG, "Server update successful (batched) - stream will provide update")
+                    // The stream will reflect the change; no need to update UI here.
                 }
                 .onFailure { error ->
                     Log.e(TAG, "Failed to update server", error)
-                    // Revert to last known good state and show error
                     _uiState.value = _uiState.value.copy(
                         error = "Update failed: ${error.message}"
                     )
-                    // Reconnect to get fresh state
                     connectToDashboard()
                 }
         }

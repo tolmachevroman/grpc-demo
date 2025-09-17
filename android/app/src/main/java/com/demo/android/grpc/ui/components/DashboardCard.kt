@@ -105,9 +105,9 @@ fun DashboardCard(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Number fields in a row with proper spacing
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                // Number fields in a column with proper spacing
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     EditableNumberField(
                         label = "User Count",
@@ -115,7 +115,7 @@ fun DashboardCard(
                         onValueChange = { editableUserCount = it },
                         isEditing = isEditing,
                         keyboardType = KeyboardType.Number,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     EditableNumberField(
@@ -124,7 +124,7 @@ fun DashboardCard(
                         onValueChange = { editableTemperature = it },
                         isEditing = isEditing,
                         keyboardType = KeyboardType.Decimal,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     EditableNumberField(
@@ -133,7 +133,7 @@ fun DashboardCard(
                         onValueChange = { editableProgressPercentage = it },
                         isEditing = isEditing,
                         keyboardType = KeyboardType.Number,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -155,19 +155,28 @@ fun DashboardCard(
                     SwitchField(
                         label = "System Enabled",
                         checked = dashboardState.isEnabled,
-                        onCheckedChange = { onUpdateField("is_enabled", it) }
+                        onCheckedChange = {
+                            android.util.Log.d("DashboardCard", "🔄 System Enabled switch toggled to: $it")
+                            onUpdateField("is_enabled", it)
+                        }
                     )
 
                     SwitchField(
                         label = "Maintenance Mode",
                         checked = dashboardState.maintenanceMode,
-                        onCheckedChange = { onUpdateField("maintenance_mode", it) }
+                        onCheckedChange = {
+                            android.util.Log.d("DashboardCard", "🔄 Maintenance Mode switch toggled to: $it")
+                            onUpdateField("maintenance_mode", it)
+                        }
                     )
 
                     SwitchField(
                         label = "Notifications",
                         checked = dashboardState.notificationsOn,
-                        onCheckedChange = { onUpdateField("notifications_on", it) }
+                        onCheckedChange = {
+                            android.util.Log.d("DashboardCard", "🔄 Notifications switch toggled to: $it")
+                            onUpdateField("notifications_on", it)
+                        }
                     )
                 }
             }

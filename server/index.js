@@ -5,7 +5,7 @@ const path = require('path');
 // Load proto file
 const PROTO_PATH = path.join(__dirname, '../proto/dashboard.proto');
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-  keepCase: true, // This keeps field names as-is (with underscores)
+  keepCase: false,
   longs: String,
   enums: String,
   defaults: true,
@@ -37,6 +37,17 @@ let dashboardState = {
 // Store active stream connections
 const activeStreams = new Map();
 
+// Convert snake_case keys to camelCase for client responses
+function toCamelCaseObject(obj) {
+  const result = {};
+  Object.keys(obj).forEach((key) => {
+    const camelKey = key.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
+    result[camelKey] = obj[key];
+  });
+  console.log('🐍➡️🐪 Converting state:', { original: obj, converted: result });
+  return result;
+}
+
 // Broadcast updates to all connected clients
 function broadcastUpdate(updatedBy, updatedFields) {
   console.log(`📡 Broadcasting to ${activeStreams.size} clients...`);
@@ -44,7 +55,7 @@ function broadcastUpdate(updatedBy, updatedFields) {
   console.log(`   Fields: ${updatedFields}`);
 
   const response = {
-    state: dashboardState,
+    state: toCamelCaseObject(dashboardState),
     updated_by: updatedBy || 'server',
     updated_fields: updatedFields || [],
   };
@@ -69,12 +80,17 @@ const dashboardService = {
   // Get current dashboard state
   getDashboard: (call, callback) => {
     console.log('GetDashboard called');
-    callback(null, { state: dashboardState });
+    callback(null, { state: toCamelCaseObject(dashboardState) });
   },
 
   // Update dashboard fields
   updateDashboard: (call, callback) => {
-    const { updates, updated_fields } = call.request;
+    const { updates, updated_fields, updatedFields } = call.request;
+
+    // Handle both snake_case and camelCase field names
+    const fieldsToUpdate = updated_fields || updatedFields;
+
+    const toSnakeCase = (str) => str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 
     // Try to identify the client from the call metadata or peer info
     let clientId = 'unknown_client';
@@ -106,49 +122,48 @@ const dashboardService = {
     }
 
     console.log(`\n🔄 UpdateDashboard called by ${clientId}`);
-    console.log('   Updates for fields:', updated_fields);
+    console.log('   Updates for fields (updated_fields):', updated_fields);
+    console.log('   Updates for fields (updatedFields):', updatedFields);
+    console.log('   Final fieldsToUpdate:', fieldsToUpdate);
+    console.log('   Updates object keys:', Object.keys(updates || {}));
 
     try {
       if (!updates) {
         callback(null, {
           success: false,
           message: 'No updates provided',
-          state: dashboardState,
+          state: toCamelCaseObject(dashboardState),
         });
         return;
       }
 
       let fieldsUpdated = [];
 
-      // Update only specified fields if provided
-      if (updated_fields && updated_fields.length > 0) {
-        updated_fields.forEach((field) => {
-          if (updates.hasOwnProperty(field)) {
-            const oldValue = dashboardState[field];
+      // Only update the fields specified in fieldsToUpdate
+      if (fieldsToUpdate && fieldsToUpdate.length > 0) {
+        fieldsToUpdate.forEach((field) => {
+          // Convert camelCase field name to snake_case for server state
+          const snakeField = toSnakeCase(field);
+
+          // Check if the update contains this field (in camelCase)
+          if (updates.hasOwnProperty(field) && updates[field] !== undefined) {
+            const oldValue = dashboardState[snakeField];
             const newValue = updates[field];
-            dashboardState[field] = newValue;
-            fieldsUpdated.push(field);
-            console.log(`   ✓ ${field}: ${oldValue} → ${newValue}`);
+            dashboardState[snakeField] = newValue;
+            fieldsUpdated.push(snakeField);
+            console.log(`   ✓ ${field} -> ${snakeField}: ${oldValue} → ${newValue}`);
+          } else {
+            console.log(`   ⚠️ Field ${field} not found in updates or is undefined`);
           }
         });
       } else {
-        // Update all fields present in updates
-        Object.keys(updates).forEach((key) => {
-          if (updates[key] !== undefined && updates[key] !== null) {
-            const oldValue = dashboardState[key];
-            const newValue = updates[key];
-            dashboardState[key] = newValue;
-            fieldsUpdated.push(key);
-            console.log(`   ✓ ${key}: ${oldValue} → ${newValue}`);
-          }
-        });
+        console.log('   ⚠️ No fieldsToUpdate specified, skipping update');
       }
-
       if (fieldsUpdated.length === 0) {
         callback(null, {
           success: false,
           message: 'No valid fields to update',
-          state: dashboardState,
+          state: toCamelCaseObject(dashboardState),
         });
         return;
       }
@@ -164,14 +179,14 @@ const dashboardService = {
       callback(null, {
         success: true,
         message: `Updated ${fieldsUpdated.length} fields`,
-        state: dashboardState,
+        state: toCamelCaseObject(dashboardState),
       });
     } catch (error) {
       console.error('Update error:', error);
       callback(null, {
         success: false,
         message: `Update failed: ${error.message}`,
-        state: dashboardState,
+        state: toCamelCaseObject(dashboardState),
       });
     }
   },
@@ -188,7 +203,7 @@ const dashboardService = {
     // Send initial state
     try {
       const initialResponse = {
-        state: dashboardState,
+        state: toCamelCaseObject(dashboardState),
         updated_by: 'server',
         updated_fields: [],
       };
@@ -225,7 +240,7 @@ const dashboardService = {
 
     // Send initial state
     call.write({
-      state: dashboardState,
+      state: toCamelCaseObject(dashboardState),
       updated_by: 'server',
       updated_fields: [],
     });

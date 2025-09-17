@@ -227,17 +227,24 @@ function App() {
       }
 
       try {
-        const stateUpdates = DashboardState.create({
-          ...updates,
-          lastUpdated: BigInt(Date.now()).toString(),
-        });
-
         const updatedFields = Object.keys(updates).filter((key) => updates[key as keyof DashboardState] !== undefined);
 
-        console.log('📤 Sending update:', { updates: stateUpdates, updatedFields });
+        // Only send if there are actual updates and updatedFields
+        if (!updates || Object.keys(updates).length === 0 || !updatedFields || updatedFields.length === 0) {
+          console.warn('[updateDashboard] No updates or updatedFields to send. Skipping request.');
+          return;
+        }
+
+        // Create a minimal updates object with only the changed fields
+        const minimalUpdates = {} as any;
+        updatedFields.forEach((field) => {
+          minimalUpdates[field] = updates[field as keyof DashboardState];
+        });
+
+        console.log('📤 Sending update:', { updates: minimalUpdates, updatedFields });
 
         const request = UpdateDashboardRequest.create({
-          updates: stateUpdates,
+          updates: minimalUpdates,
           updatedFields: updatedFields,
         });
 
