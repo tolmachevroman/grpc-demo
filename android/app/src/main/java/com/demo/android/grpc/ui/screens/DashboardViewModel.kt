@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.demo.android.grpc.DashboardState
+import com.demo.android.grpc.Priority
 import com.demo.android.grpc.data.remote.DashboardRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -161,6 +162,7 @@ class DashboardViewModel(
                 "is_enabled" -> builder.isEnabled = value as Boolean
                 "maintenance_mode" -> builder.maintenanceMode = value as Boolean
                 "notifications_on" -> builder.notificationsOn = value as Boolean
+                "priority" -> builder.priority = value as Priority
                 else -> {
                     Log.w(TAG, "Unknown field: $field")
                     return state
@@ -190,6 +192,7 @@ class DashboardViewModel(
                     "is_enabled" -> builder.isEnabled = value as Boolean
                     "maintenance_mode" -> builder.maintenanceMode = value as Boolean
                     "notifications_on" -> builder.notificationsOn = value as Boolean
+                    "priority" -> builder.priority = value as Priority
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error applying update for field $field", e)

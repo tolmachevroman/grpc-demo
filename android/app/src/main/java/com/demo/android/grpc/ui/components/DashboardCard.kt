@@ -1,16 +1,23 @@
 package com.demo.android.grpc.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.demo.android.grpc.DashboardState
+import com.demo.android.grpc.Priority
+import kotlin.math.roundToInt
 
 @Composable
 fun DashboardCard(
@@ -18,22 +25,15 @@ fun DashboardCard(
     onUpdateField: (field: String, value: Any) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isEditing by remember { mutableStateOf(false) }
     var editableTitle by remember { mutableStateOf(dashboardState.title) }
     var editableDescription by remember { mutableStateOf(dashboardState.description) }
     var editableStatusMessage by remember { mutableStateOf(dashboardState.statusMessage) }
-    var editableUserCount by remember { mutableStateOf(dashboardState.userCount.toString()) }
-    var editableTemperature by remember { mutableStateOf(dashboardState.temperature.toString()) }
-    var editableProgressPercentage by remember { mutableStateOf(dashboardState.progressPercentage.toString()) }
 
     // Update local state when dashboardState changes
     LaunchedEffect(dashboardState) {
         editableTitle = dashboardState.title
         editableDescription = dashboardState.description
         editableStatusMessage = dashboardState.statusMessage
-        editableUserCount = dashboardState.userCount.toString()
-        editableTemperature = dashboardState.temperature.toString()
-        editableProgressPercentage = dashboardState.progressPercentage.toString()
     }
 
     Card(
@@ -42,7 +42,7 @@ fun DashboardCard(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            // Header with Edit/Save button
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -53,87 +53,81 @@ fun DashboardCard(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium
                 )
-
-                FilledTonalButton(
-                    onClick = {
-                        if (isEditing) {
-                            // Save changes
-                            onUpdateField("title", editableTitle)
-                            onUpdateField("description", editableDescription)
-                            onUpdateField("status_message", editableStatusMessage)
-                            onUpdateField("user_count", editableUserCount.toIntOrNull() ?: 0)
-                            onUpdateField("temperature", editableTemperature.toDoubleOrNull() ?: 0.0)
-                            onUpdateField("progress_percentage", editableProgressPercentage.toIntOrNull() ?: 0)
-                        }
-                        isEditing = !isEditing
-                    },
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Text(
-                        text = if (isEditing) "Save" else "Edit",
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Editable Fields with proper spacing
+            // Always-editable Text Fields
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                EditableField(
+                AlwaysEditableField(
                     label = "Title",
                     value = editableTitle,
-                    onValueChange = { editableTitle = it },
-                    isEditing = isEditing
+                    onValueChange = {
+                        editableTitle = it
+                        onUpdateField("title", it)
+                    }
                 )
 
-                EditableField(
+                AlwaysEditableField(
                     label = "Description",
                     value = editableDescription,
-                    onValueChange = { editableDescription = it },
-                    isEditing = isEditing
+                    onValueChange = {
+                        editableDescription = it
+                        onUpdateField("description", it)
+                    }
                 )
 
-                EditableField(
+                AlwaysEditableField(
                     label = "Status",
                     value = editableStatusMessage,
-                    onValueChange = { editableStatusMessage = it },
-                    isEditing = isEditing
+                    onValueChange = {
+                        editableStatusMessage = it
+                        onUpdateField("status_message", it)
+                    }
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Number fields in a column with proper spacing
+                // Sliders for numeric values
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    EditableNumberField(
+                    SliderField(
                         label = "User Count",
-                        value = editableUserCount,
-                        onValueChange = { editableUserCount = it },
-                        isEditing = isEditing,
-                        keyboardType = KeyboardType.Number,
-                        modifier = Modifier.fillMaxWidth()
+                        value = dashboardState.userCount.toFloat(),
+                        onValueChange = { onUpdateField("user_count", it.roundToInt()) },
+                        valueRange = 0f..200f,
+                        steps = 39,
+                        valueFormatter = { "${it.roundToInt()} users" }
                     )
 
-                    EditableNumberField(
-                        label = "Temperature (°C)",
-                        value = editableTemperature,
-                        onValueChange = { editableTemperature = it },
-                        isEditing = isEditing,
-                        keyboardType = KeyboardType.Decimal,
-                        modifier = Modifier.fillMaxWidth()
+                    SliderField(
+                        label = "Temperature",
+                        value = dashboardState.temperature.toFloat(),
+                        onValueChange = { onUpdateField("temperature", it.toDouble()) },
+                        valueRange = 0f..50f,
+                        steps = 49,
+                        valueFormatter = { "${it.roundToInt()}°C" }
                     )
 
-                    EditableNumberField(
-                        label = "Progress (%)",
-                        value = editableProgressPercentage,
-                        onValueChange = { editableProgressPercentage = it },
-                        isEditing = isEditing,
-                        keyboardType = KeyboardType.Number,
-                        modifier = Modifier.fillMaxWidth()
+                    SliderField(
+                        label = "Progress",
+                        value = dashboardState.progressPercentage.toFloat(),
+                        onValueChange = { onUpdateField("progress_percentage", it.roundToInt()) },
+                        valueRange = 0f..100f,
+                        steps = 99,
+                        valueFormatter = { "${it.roundToInt()}%" }
+                    )
+
+                    // Priority buttons: LOW, MEDIUM, HIGH, CRITICAL
+                    PriorityButtonField(
+                        label = "Priority Level",
+                        currentPriority = dashboardState.priority,
+                        onPriorityChange = { selectedPriority ->
+                            onUpdateField("priority", selectedPriority)
+                        }
                     )
                 }
             }
@@ -156,7 +150,10 @@ fun DashboardCard(
                         label = "System Enabled",
                         checked = dashboardState.isEnabled,
                         onCheckedChange = {
-                            android.util.Log.d("DashboardCard", "🔄 System Enabled switch toggled to: $it")
+                            android.util.Log.d(
+                                "DashboardCard",
+                                " System Enabled switch toggled to: $it"
+                            )
                             onUpdateField("is_enabled", it)
                         }
                     )
@@ -165,7 +162,10 @@ fun DashboardCard(
                         label = "Maintenance Mode",
                         checked = dashboardState.maintenanceMode,
                         onCheckedChange = {
-                            android.util.Log.d("DashboardCard", "🔄 Maintenance Mode switch toggled to: $it")
+                            android.util.Log.d(
+                                "DashboardCard",
+                                " Maintenance Mode switch toggled to: $it"
+                            )
                             onUpdateField("maintenance_mode", it)
                         }
                     )
@@ -174,7 +174,10 @@ fun DashboardCard(
                         label = "Notifications",
                         checked = dashboardState.notificationsOn,
                         onCheckedChange = {
-                            android.util.Log.d("DashboardCard", "🔄 Notifications switch toggled to: $it")
+                            android.util.Log.d(
+                                "DashboardCard",
+                                " Notifications switch toggled to: $it"
+                            )
                             onUpdateField("notifications_on", it)
                         }
                     )
@@ -197,11 +200,10 @@ fun DashboardCard(
 }
 
 @Composable
-private fun EditableField(
+private fun AlwaysEditableField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    isEditing: Boolean,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -212,56 +214,267 @@ private fun EditableField(
             modifier = Modifier.padding(bottom = 4.dp)
         )
 
-        if (isEditing) {
-            OutlinedTextField(
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyMedium
+        )
+    }
+}
+
+@Composable
+private fun SliderField(
+    label: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int,
+    valueFormatter: (Float) -> String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 12.sp
+                )
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Text(
+                        text = valueFormatter(value),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        fontSize = 12.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(3.dp))
+
+            Slider(
                 value = value,
                 onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium
+                valueRange = valueRange,
+                steps = steps,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(22.dp)
+                    .padding(horizontal = 0.dp),
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+                    activeTickColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
+                    inactiveTickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                )
             )
-        } else {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
+
+            // Show range indicators
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 1.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = valueFormatter(valueRange.start),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 10.sp
+                )
+                Text(
+                    text = valueFormatter(valueRange.endInclusive),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 10.sp
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun EditableNumberField(
+private fun PriorityButtonField(
     label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    isEditing: Boolean,
-    keyboardType: KeyboardType,
+    currentPriority: Priority,
+    onPriorityChange: (Priority) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 4.dp)
-        )
-        
-        if (isEditing) {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium
-            )
-        } else {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Text(
+                        text = when (currentPriority) {
+                            Priority.PRIORITY_LOW -> "Low"
+                            Priority.PRIORITY_MEDIUM -> "Medium"
+                            Priority.PRIORITY_HIGH -> "High"
+                            Priority.PRIORITY_CRITICAL -> "Critical"
+                            else -> "Unspecified"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        onPriorityChange(Priority.PRIORITY_LOW)
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (currentPriority == Priority.PRIORITY_LOW) Color(
+                            0xFF4CAF50
+                        ) else Color.Transparent,
+                        contentColor = if (currentPriority == Priority.PRIORITY_LOW) Color.White else Color(
+                            0xFF4CAF50
+                        )
+                    ),
+                    border = BorderStroke(1.dp, Color(0xFF4CAF50)),
+                    shape = RoundedCornerShape(6.dp),
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "Low",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontSize = 12.sp
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        onPriorityChange(Priority.PRIORITY_MEDIUM)
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (currentPriority == Priority.PRIORITY_MEDIUM) Color(
+                            0xFFFF9800
+                        ) else Color.Transparent,
+                        contentColor = if (currentPriority == Priority.PRIORITY_MEDIUM) Color.White else Color(
+                            0xFFFF9800
+                        )
+                    ),
+                    border = BorderStroke(1.dp, Color(0xFFFF9800)),
+                    shape = RoundedCornerShape(6.dp),
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "Medium",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontSize = 12.sp
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        onPriorityChange(Priority.PRIORITY_HIGH)
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (currentPriority == Priority.PRIORITY_HIGH) Color(
+                            0xFFFF5722
+                        ) else Color.Transparent,
+                        contentColor = if (currentPriority == Priority.PRIORITY_HIGH) Color.White else Color(
+                            0xFFFF5722
+                        )
+                    ),
+                    border = BorderStroke(1.dp, Color(0xFFFF5722)),
+                    shape = RoundedCornerShape(6.dp),
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "High",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontSize = 12.sp
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        onPriorityChange(Priority.PRIORITY_CRITICAL)
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (currentPriority == Priority.PRIORITY_CRITICAL) Color(
+                            0xFFF44336
+                        ) else Color.Transparent,
+                        contentColor = if (currentPriority == Priority.PRIORITY_CRITICAL) Color.White else Color(
+                            0xFFF44336
+                        )
+                    ),
+                    border = BorderStroke(1.dp, Color(0xFFF44336)),
+                    shape = RoundedCornerShape(6.dp),
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "Critical",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontSize = 12.sp
+                    )
+                }
+            }
         }
     }
 }
