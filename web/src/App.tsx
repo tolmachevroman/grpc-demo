@@ -36,7 +36,6 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [client, setClient] = useState<DashboardServiceClient | null>(null);
-  const [activeTab, setActiveTab] = useState('status');
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -327,34 +326,12 @@ function App() {
           MoonIcon={MoonIcon}
         />
 
-        {/* Tab Navigation */}
-        <div className="flex space-x-1 border-b">
-          {['status', 'controls', 'metrics', 'config'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm font-medium capitalize transition-colors
-                ${activeTab === tab ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab Content */}
+        {/* All Content Sections */}
         <div className="space-y-6">
-          {activeTab === 'status' && (
-            <>
-              <StatusCard dashboard={dashboard} onPriorityChange={handlePriorityChange} />
-              <ToggleControls dashboard={dashboard} onToggle={handleToggle} />
-            </>
-          )}
-
-          {activeTab === 'controls' && <ToggleControls dashboard={dashboard} onToggle={handleToggle} />}
-
-          {activeTab === 'metrics' && <MetricsCards dashboard={dashboard} onSliderChange={handleSliderChange} />}
-
-          {activeTab === 'config' && <ConfigurationPanel dashboard={dashboard} onConfigUpdate={handleConfigUpdate} />}
+          <StatusCard dashboard={dashboard} onPriorityChange={handlePriorityChange} />
+          <ToggleControls dashboard={dashboard} onToggle={handleToggle} />
+          <MetricsCards dashboard={dashboard} onSliderChange={handleSliderChange} />
+          <ConfigurationPanel dashboard={dashboard} onConfigUpdate={handleConfigUpdate} />
         </div>
 
         {/* Footer */}
